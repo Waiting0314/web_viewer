@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="upload-card">
+        <div class="upload-header">
+            <h2>上傳影片</h2>
+            <p>分享您的精彩時刻</p>
+        </div>
+        <div class="upload-body">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                
+                <div class="custom-form-group">
+                    <label for="{{ form.title.id_for_label }}" class="custom-label">標題</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="text-danger mt-1">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="custom-form-group">
+                    <label for="{{ form.description.id_for_label }}" class="custom-label">描述</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="custom-form-group">
+                    <label class="custom-label">影片檔案</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" name="{{ form.file.name }}" id="{{ form.file.id_for_label }}" class="file-upload-input" accept="video/*" required onchange="updateFileName(this)">
+                        <div class="file-upload-content">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text" id="fileNameDisplay">點擊或拖曳檔案至此處上傳</div>
+                            <div class="text-muted small mt-2">支援 MP4, WebM 等格式</div>
+                        </div>
+                    </div>
+                    {% if form.file.errors %}
+                    <div class="text-danger mt-1">{{ form.file.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar-custom" id="progressBar"></div>
+                </div>
+                <div id="progressText" class="text-center mt-2 text-muted small" style="display: none;">0%</div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%;">
+                        <i class="fas fa-paper-plane"></i> 開始上傳
+                    </button>
+                    <a href="{% url 'video_list' %}" class="btn btn-outline-secondary text-center" style="display: block; text-decoration: none; padding: 0.75rem;">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateFileName(input) {
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    if (input.files && input.files[0]) {
+        fileNameDisplay.textContent = input.files[0].name;
+        fileNameDisplay.style.color = 'var(--primary-color)';
+        fileNameDisplay.style.fontWeight = '600';
+    } else {
+        fileNameDisplay.textContent = '點擊或拖曳檔案至此處上傳';
+        fileNameDisplay.style.color = '#64748b';
+    }
+}
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const formData = new FormData(form);
+    const xhr = new XMLHttpRequest();
+    const submitBtn = document.getElementById('submitBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    // UI updates
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
+    progressContainer.style.display = 'block';
+    progressText.style.display = 'block';
+
+    xhr.open('POST', form.action, true);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+    xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBar.style.width = percentComplete + '%';
+            progressText.textContent = Math.round(percentComplete) + '%';
+        }
+    };
+
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.status === 'success') {
+                    window.location.href = response.redirect_url;
+                } else {
+                    alert('上傳失敗: ' + (response.message || '未知錯誤'));
+                    resetUI();
+                }
+            } catch (e) {
+                // If response is not JSON (e.g. redirect), try to follow it or reload
+                if (xhr.responseURL && xhr.responseURL !== window.location.href) {
+                     window.location.href = xhr.responseURL;
+                } else {
+                    // Fallback
+                    window.location.href = "{% url 'video_list' %}";
+                }
+            }
+        } else {
+            alert('上傳失敗，請稍後再試。');
+            resetUI();
+        }
+    };
+
+    xhr.onerror = function() {
+        alert('網絡錯誤，請檢查連線。');
+        resetUI();
+    };
+
+    xhr.send(formData);
+
+    function resetUI() {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 開始上傳';
+        progressContainer.style.display = 'none';
+        progressText.style.display = 'none';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+    }
+});
+
+// Apply custom styles to form inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('input[type="text"], textarea');
+    inputs.forEach(input => {
+        if (input.tagName === 'TEXTAREA') {
+            input.classList.add('custom-textarea');
+            input.rows = 4;
+        } else {
+            input.classList.add('custom-input');
+        }
+    });
+});
+</script>
+{% endblock %}

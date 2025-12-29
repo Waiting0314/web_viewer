@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="viewer-header" style="margin-bottom: 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>{{ album.title }}</h1>
+            <p style="color: #64748b;">{{ album.description }}</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'album_edit' album.pk %}" class="btn-primary"
+                style="background-color: #f59e0b; text-decoration: none;">編輯</a>
+            <a href="{% url 'album_delete' album.pk %}" class="btn-primary"
+                style="background-color: #ef4444; text-decoration: none;">刪除</a>
+            <a href="{% url 'album_list' %}" class="btn-primary"
+                style="background-color: #64748b; text-decoration: none;">返回列表</a>
+        </div>
+    </div>
+</div>
+
+<div class="viewer-controls">
+    <div class="mode-switch">
+        <button class="mode-btn {% if is_scroll_mode %}active{% endif %}" onclick="setMode('scroll')">
+            <i class="fas fa-scroll"></i> 捲動模式
+        </button>
+        <button class="mode-btn {% if is_flip_mode %}active{% endif %}" onclick="setMode('flip')">
+            <i class="fas fa-book-open"></i> 翻頁模式
+        </button>
+    </div>
+    <div id="page-info" style="display: none;">
+        <span id="current-page">1</span> / <span id="total-pages">{{ photos|length }}</span>
+    </div>
+</div>
+
+<!-- Scroll View -->
+<div id="scroll-view" class="scroll-view" {% if is_flip_mode %}style="display: none;" {% endif %}>
+    {% for photo in photos %}
+    <img src="{{ photo.image.url }}" alt="{{ photo.filename }}" loading="lazy">
+    {% endfor %}
+</div>
+
+<!-- Flip View -->
+<div id="flip-view" class="flip-view" {% if is_scroll_mode %}style="display: none;" {% endif %}>
+    <button class="flip-nav prev-btn" onclick="prevPage()">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    {% for photo in photos %}
+    <img src="{{ photo.image.url }}" alt="{{ photo.filename }}"
+        class="flip-page {% if forloop.first %}active{% endif %}" data-index="{{ forloop.counter0 }}">
+    {% endfor %}
+
+    <button class="flip-nav next-btn" onclick="nextPage()">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+
+    <div class="page-indicator">
+        <span id="flip-current">1</span> / {{ photos|length }}
+    </div>
+</div>
+
+<!-- Navigation Sidebar -->
+<div class="viewer-sidebar">
+    <a href="javascript:history.back()" class="sidebar-btn" title="返回上一頁">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    
+    <div class="sidebar-info">
+        <div class="page-counter">
+            <span id="sidebar-current">1</span>
+            <span class="separator">/</span>
+            <span id="sidebar-total">{{ photos|length }}</span>
+        </div>
+        <div class="jump-to-page" style="width: 100%;">
+            <input type="range" id="page-slider" min="1" max="{{ photos|length }}" value="1" style="width: 100%; cursor: pointer;">
+        </div>
+    </div>
+</div>
+
+<style>
+    .viewer-sidebar {
+        position: fixed;
+        right: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        padding: 1rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+        z-index: 100;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .sidebar-btn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        border-radius: 50%;
+        color: #64748b;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .sidebar-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        transform: translateY(-2px);
+    }
+
+    .sidebar-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .page-counter {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 1.1rem;
+    }
+
+    .page-counter .separator {
+        color: #94a3b8;
+        margin: 0 0.2rem;
+    }
+
+    .jump-to-page {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    #jump-input {
+        width: 50px;
+        padding: 0.25rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.25rem;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+
+    .jump-btn {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 0.25rem;
+        width: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .jump-btn:hover {
+        background: #2563eb;
+    }
+
+    /* Hide sidebar on mobile if needed, or adjust position */
+    @media (max-width: 768px) {
+        .viewer-sidebar {
+            right: 1rem;
+            padding: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/viewer.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if we came from upload
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('from_upload')) {
+            const backBtn = document.querySelector('.sidebar-btn[title="返回上一頁"]');
+            if (backBtn) {
+                backBtn.href = "{% url 'album_upload' %}";
+                backBtn.title = "繼續上傳";
+            }
+        }
+    });
+</script>
+{% endblock %}

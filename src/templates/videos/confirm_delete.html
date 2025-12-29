@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="delete-card">
+        <div class="delete-header">
+            <div class="delete-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h2 class="delete-title">確認刪除</h2>
+        </div>
+        <div class="delete-body">
+            <p class="delete-text">
+                您確定要刪除影片 "<strong>{{ video.title }}</strong>" 嗎？<br>
+                此動作無法復原，影片檔案將被永久移除。
+            </p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="btn-group">
+                    <a href="{% url 'video_detail' pk=video.pk %}" class="btn-secondary-custom">取消</a>
+                    <button type="submit" class="btn-danger-custom">確認刪除</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

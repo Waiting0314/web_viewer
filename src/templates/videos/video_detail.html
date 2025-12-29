@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="viewer-header" style="margin-bottom: 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>{{ video.title }}</h1>
+            <p style="color: #64748b;">{{ video.description }}</p>
+            <p class="text-muted small" style="margin-top: 0.5rem;">上傳於 {{ video.created_at|date:"Y-m-d H:i" }}</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'video_delete' pk=video.pk %}" class="btn-primary"
+                style="background-color: #ef4444; text-decoration: none;">刪除影片</a>
+            <a href="{% url 'video_list' %}" class="btn-primary"
+                style="background-color: #64748b; text-decoration: none;">返回列表</a>
+        </div>
+    </div>
+</div>
+
+<div class="video-container-wrapper">
+    <div class="video-player-container" id="videoContainer">
+        <video id="mainVideo" class="main-video" {% if video.cover %}poster="{{ video.cover.url }}"{% endif %} onclick="togglePlay()">
+            <source src="{{ video.file.url }}" type="video/mp4">
+            您的瀏覽器不支援 HTML5 影片標籤。
+        </video>
+        
+        <div class="video-controls" id="videoControls">
+            <div class="progress-area">
+                <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1">
+            </div>
+            
+            <div class="controls-row">
+                <div class="controls-left">
+                    <button class="control-btn" onclick="togglePlay()" title="播放/暫停">
+                        <i class="fas fa-play" id="playIcon"></i>
+                    </button>
+                    
+                    <div class="time-display">
+                        <span id="currentTime">00:00</span> / <span id="duration">00:00</span>
+                    </div>
+                </div>
+                
+                <div class="controls-right">
+                    <div class="speed-control">
+                        <select id="speedSelect" onchange="changeSpeed(this.value)" class="speed-select">
+                            <option value="0.5">0.5x</option>
+                            <option value="1" selected>1.0x</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2.0x</option>
+                        </select>
+                    </div>
+                    
+                    <button class="control-btn" onclick="toggleFullscreen()" title="全螢幕">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Sidebar -->
+<div class="viewer-sidebar">
+    <a href="javascript:history.back()" class="sidebar-btn" title="返回上一頁">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+</div>
+
+<style>
+    .video-container-wrapper {
+        display: flex;
+        justify-content: center;
+        background: #000;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .video-player-container {
+        position: relative;
+        width: 100%;
+        max-width: 1000px; /* Limit max width for better viewing on large screens */
+        aspect-ratio: 16/9;
+        background: #000;
+    }
+
+    .main-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .video-controls {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+        padding: 1rem;
+        opacity: 0;
+        transition: opacity 0.3s;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .video-player-container:hover .video-controls {
+        opacity: 1;
+    }
+
+    .progress-area {
+        width: 100%;
+    }
+
+    #progressBar {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        cursor: pointer;
+        appearance: none;
+    }
+
+    #progressBar::-webkit-slider-thumb {
+        appearance: none;
+        width: 12px;
+        height: 12px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .controls-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+    }
+
+    .controls-left, .controls-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .control-btn {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 1.2rem;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.2s;
+    }
+
+    .control-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .time-display {
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+
+    .speed-select {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .speed-select option {
+        background: #333;
+        color: white;
+    }
+
+    /* Sidebar Styles (Copied from viewer.html) */
+    .viewer-sidebar {
+        position: fixed;
+        right: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        padding: 1rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+        z-index: 100;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .sidebar-btn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        border-radius: 50%;
+        color: #64748b;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .sidebar-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .viewer-sidebar {
+            right: 1rem;
+            padding: 0.5rem;
+        }
+    }
+</style>
+
+<script>
+    const video = document.getElementById('mainVideo');
+    const playIcon = document.getElementById('playIcon');
+    const progressBar = document.getElementById('progressBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const videoContainer = document.getElementById('videoContainer');
+
+    function togglePlay() {
+        if (video.paused) {
+            video.play();
+            playIcon.className = 'fas fa-pause';
+        } else {
+            video.pause();
+            playIcon.className = 'fas fa-play';
+        }
+    }
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function changeSpeed(speed) {
+        video.playbackRate = parseFloat(speed);
+    }
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            videoContainer.requestFullscreen().catch(err => {
+                alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    video.addEventListener('loadedmetadata', () => {
+        durationEl.textContent = formatTime(video.duration);
+        progressBar.max = video.duration;
+    });
+
+    video.addEventListener('timeupdate', () => {
+        progressBar.value = video.currentTime;
+        currentTimeEl.textContent = formatTime(video.currentTime);
+    });
+
+    progressBar.addEventListener('input', () => {
+        video.currentTime = progressBar.value;
+    });
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            togglePlay();
+        } else if (e.code === 'ArrowRight') {
+            video.currentTime += 5;
+        } else if (e.code === 'ArrowLeft') {
+            video.currentTime -= 5;
+        }
+    });
+
+    // Check if we came from upload
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('from_upload')) {
+            const backBtn = document.querySelector('.sidebar-btn[title="返回上一頁"]');
+            if (backBtn) {
+                backBtn.href = "{% url 'video_list' %}"; 
+            }
+        }
+    });
+</script>
+{% endblock %}

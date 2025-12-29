@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="header-section" style="margin-bottom: 2rem;">
+	<h1>相簿列表</h1>
+
+	<!-- Search and Filter Section -->
+	<div class="filters" style="margin-top: 1rem; padding: 1rem; background: #1e293b; border-radius: 0.5rem;">
+		<form method="get" action="" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+			<!-- Search -->
+			<div style="flex: 1; min-width: 200px;">
+				<input type="text" name="q" value="{{ current_query|default:'' }}" placeholder="搜尋相簿..."
+					style="width: 100%; padding: 0.5rem; border-radius: 0.25rem; border: 1px solid #475569; background: #0f172a; color: white;">
+			</div>
+
+			<!-- Sort -->
+			<select name="sort" onchange="this.form.submit()"
+				style="padding: 0.5rem; border-radius: 0.25rem; border: 1px solid #475569; background: #0f172a; color: white;">
+				<option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>最新建立</option>
+				<option value="created_at" {% if current_sort == 'created_at' %}selected{% endif %}>最早建立</option>
+				<option value="title" {% if current_sort == 'title' %}selected{% endif %}>標題 (A-Z)</option>
+				<option value="-title" {% if current_sort == '-title' %}selected{% endif %}>標題 (Z-A)</option>
+			</select>
+
+			<!-- Keep tag filter if exists -->
+			{% if current_tag %}
+			<input type="hidden" name="tag" value="{{ current_tag }}">
+			<a href="?{% if current_query %}q={{ current_query }}&{% endif %}sort={{ current_sort }}"
+				style="color: #ef4444; text-decoration: none; display: flex; align-items: center; gap: 0.25rem;">
+				<i class="fas fa-times"></i> 清除標籤: {{ current_tag }}
+			</a>
+			{% endif %}
+
+			<button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">搜尋</button>
+		</form>
+
+		<!-- Tag Cloud -->
+		<div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+			<span style="color: #94a3b8; font-size: 0.875rem;">標籤:</span>
+			{% for tag in tags %}
+			<a href="?tag={{ tag.name }}{% if current_query %}&q={{ current_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+				style="background: {% if current_tag == tag.name %}#3b82f6{% else %}#334155{% endif %}; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; text-decoration: none; font-size: 0.875rem;">
+				{{ tag.name }}
+			</a>
+			{% endfor %}
+		</div>
+	</div>
+</div>
+
+<div class="album-grid">
+	{% for album in albums %}
+	<div class="card">
+		<a href="{% url 'album_detail' album.pk %}">
+			{% if album.cover_image %}
+			<img src="{{ album.cover_image.url }}" alt="{{ album.title }}" class="card-img">
+			{% else %}
+			<div class="card-img" style="display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+				<i class="fas fa-image fa-3x"></i>
+			</div>
+			{% endif %}
+		</a>
+		<div class="card-body">
+			<h3 class="card-title">
+				<a href="{% url 'album_detail' album.pk %}" style="text-decoration: none; color: inherit;">
+					{{ album.title }}
+				</a>
+			</h3>
+			<p class="card-text">{{ album.description|truncatechars:100 }}</p>
+
+			<!-- Tags in Card -->
+			<div style="margin-bottom: 1rem; display: flex; gap: 0.25rem; flex-wrap: wrap;">
+				{% for tag in album.tags.all %}
+				<span
+					style="background: #334155; color: #e2e8f0; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem;">
+					{{ tag.name }}
+				</span>
+				{% endfor %}
+			</div>
+
+			<div
+				style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; color: #64748b; margin-bottom: 1rem;">
+				<span><i class="fas fa-camera"></i> {{ album.photos.count }} 張照片</span>
+				<span>{{ album.created_at|date:"Y/m/d" }}</span>
+			</div>
+			<div style="display: flex; gap: 0.5rem;">
+				<a href="{% url 'album_edit' album.pk %}" class="btn-primary"
+					style="background-color: #f59e0b; padding: 0.25rem 0.5rem; font-size: 0.875rem; text-decoration: none;">編輯</a>
+				<a href="{% url 'album_delete' album.pk %}" class="btn-primary"
+					style="background-color: #ef4444; padding: 0.25rem 0.5rem; font-size: 0.875rem; text-decoration: none;">刪除</a>
+			</div>
+		</div>
+	</div>
+	{% empty %}
+	<div style="grid-column: 1/-1; text-align: center; padding: 4rem;">
+		<p style="color: #64748b; margin-bottom: 1rem;">目前沒有相簿</p>
+		<a href="{% url 'album_upload' %}" class="btn-primary">立即上傳</a>
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <h1 style="margin-bottom: 2rem;">編輯相簿</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <small style="color: #64748b; display: block; margin-top: 0.25rem;">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% if field.errors %}
+                    <div style="color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ field.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div style="margin-top: 2rem;">
+                    <button type="submit">儲存變更</button>
+                    <a href="{% url 'album_detail' album.pk %}"
+                        style="margin-left: 1rem; color: #64748b; text-decoration: none;">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; text-align: center;">
+    <div class="card">
+        <div class="card-body">
+            <h2 style="margin-bottom: 1rem; color: #991b1b;">刪除相簿確認</h2>
+            <p style="margin-bottom: 2rem;">您確定要刪除相簿 "<strong>{{ album.title }}</strong>" 嗎？<br>此動作無法復原，且所有相關的照片都會被刪除。
+            </p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div style="display: flex; justify-content: center; gap: 1rem;">
+                    <button type="submit" style="background-color: #ef4444;">確認刪除</button>
+                    <a href="{% url 'album_detail' album.pk %}" class="btn-primary"
+                        style="background-color: #64748b; text-decoration: none; display: inline-block; padding: 0.75rem 1.5rem;">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
